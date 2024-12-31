@@ -49,7 +49,7 @@ data["text"] = data["text"].apply(preprocess_text)
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 encodings = tokenizer(list(data["text"]), truncation=True, padding=True, max_length=128)
 labels = torch.tensor(data["label"].values)
-
+print("Labels", labels)
 # Create PyTorch Dataset
 class HateSpeechDataset(torch.utils.data.Dataset):
     def __init__(self, encodings, labels):
