@@ -2,3 +2,4 @@
 /wandb
 /results
 .DS_Store
+/bert_cyberhate_model

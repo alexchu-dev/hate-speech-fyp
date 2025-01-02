@@ -3,6 +3,7 @@ import pandas as pd
 import torch
 from tqdm import tqdm
 from transformers import BertTokenizer
+from sklearn.model_selection import train_test_split
 
 # Declaring device
 if torch.backends.mps.is_available():
@@ -22,15 +23,11 @@ else:
     print("###Using CPU now.###\n")
 
 # Load dataset
-df_train = pd.read_csv("datasets/HatemojiBuild-train.csv")
-df_test = pd.read_csv("datasets/HatemojiBuild-test.csv")
-df_val = pd.read_csv("datasets/HatemojiBuild-validation.csv")
-print(df_train.head())
+df = pd.read_csv("datasets/HateSpeechDataset.csv")
 
 # Preprocess text
-train_texts, train_labels = df_train['text'], df_train['label_gold']
-val_texts, val_labels = df_val['text'], df_val['label_gold']
-test_texts, test_labels = df_test['text'], df_test['label_gold']
+train_texts, test_texts, train_labels, test_labels = train_test_split(df['Content'], df['Label'], test_size=0.2, random_state=42)
+train_texts, val_texts, train_labels, val_labels = train_test_split(train_texts, train_labels, test_size=0.2, random_state=42)
 
 print("Train size:", len(train_texts))
 print("Val size:", len(val_texts))
@@ -153,8 +150,8 @@ print("Validation loss:", val_loss / len(validation_dataloader))
 print("Validation accuracy:", val_accuracy)
 
 # Save the fine-tuned model
-model.save_pretrained("./bert_cyberhate_model")
-tokenizer.save_pretrained("./bert_cyberhate_model")
+model.save_pretrained("./bert_cyberhate_model2")
+tokenizer.save_pretrained("./bert_cyberhate_model2")
 
 # Test the model
 test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
