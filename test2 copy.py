@@ -23,10 +23,10 @@ else:
     print("###Using CPU now.###\n")
 
 # Load dataset
-df = pd.read_csv("datasets/HateSpeechDataset.csv")
+df = pd.read_csv("datasets\labeled_and_scored_comments.csv")
 
 # Preprocess text
-train_texts, test_texts, train_labels, test_labels = train_test_split(df['Content'], df['Label'], test_size=0.2, random_state=42)
+train_texts, test_texts, train_labels, test_labels = train_test_split(df['text'], df['label'], test_size=0.2, random_state=42)
 train_texts, val_texts, train_labels, val_labels = train_test_split(train_texts, train_labels, test_size=0.2, random_state=42)
 
 print("Train size:", len(train_texts))

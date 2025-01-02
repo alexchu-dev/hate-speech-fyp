@@ -12,7 +12,7 @@ device = torch.device("mps") if torch.backends.mps.is_available() else (
 model.to(device)
 
 # Input text
-text = "fuck these black gay"
+text = "I would love to 🔪 some 👳🏾"
 
 # Tokenize and prepare for model input
 inputs = tokenizer(
@@ -39,5 +39,5 @@ with torch.no_grad():
 predicted_class = torch.argmax(logits, dim=-1).item()
 print(f"Predicted class: {predicted_class}")
 
-label_map = {0: "Negative", 1: "Positive"}  # Example label map
+label_map = {0: "Positive", 1: "Negative"}  # Example label map
 print(f"Predicted label: {label_map[predicted_class]}")

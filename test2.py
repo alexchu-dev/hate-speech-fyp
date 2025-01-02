@@ -3,6 +3,11 @@ import pandas as pd
 import torch
 from tqdm import tqdm
 from transformers import BertTokenizer
+from transformers import BertForSequenceClassification
+from transformers import AdamW
+from transformers import get_scheduler
+from torch.utils.data import DataLoader
+from sklearn.metrics import precision_score, recall_score, f1_score
 
 # Declaring device
 if torch.backends.mps.is_available():
@@ -20,7 +25,7 @@ else:
               "and/or you do not have an MPS-enabled device on this machine.")
     device = torch.device("cpu")
     print("###Using CPU now.###\n")
-
+print(torch.cuda.is_available())
 # Load dataset
 df_train = pd.read_csv("datasets/HatemojiBuild-train.csv")
 df_test = pd.read_csv("datasets/HatemojiBuild-test.csv")
@@ -86,20 +91,25 @@ val_dataset = EmojiDataset(val_encodings, val_labels)
 test_dataset = EmojiDataset(test_encodings, test_labels)
 
 # Model architecture
-from transformers import BertForSequenceClassification
 model = BertForSequenceClassification.from_pretrained("bert-base-uncased", num_labels=2)
+
+# Freeze all parameters
+for param in model.base_model.parameters():
+    param.requires_grad = False
+    
+# Unfreeze classification head
+for param in model.classifier.parameters():
+    param.requires_grad = True
+
 model.to(device)
 
-from transformers import AdamW
-from transformers import get_scheduler
-optimizer = AdamW(model.parameters(), lr=5e-5)
+optimizer = AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=5e-5)
 
 # Train the model
-from torch.utils.data import DataLoader
 batch_size = 16
 train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
-num_epochs = 4
+num_epochs = 50
 
 num_training_steps = len(train_dataset) * num_epochs // batch_size
 scheduler = get_scheduler(
@@ -125,7 +135,7 @@ for epoch in range(num_epochs):
         loss.backward()
         optimizer.step()
         scheduler.step()
-    print("Epoch:", epoch + 1, "Loss:", loss)
+    print("Epoch:", epoch + 1, "Loss:", loss.item())
     print("Train loss:", train_loss / len(train_dataloader))
 
 # Validation
@@ -180,8 +190,6 @@ with torch.no_grad():
 test_accuracy = correct / total
 print("Test loss:", test_loss / len(test_dataloader))
 print("Test accuracy:", test_accuracy)
-
-from sklearn.metrics import precision_score, recall_score, f1_score
 
 # Collect predictions and labels
 all_predictions = []
