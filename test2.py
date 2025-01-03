@@ -1,6 +1,9 @@
 import numpy as np
 import pandas as pd
 import torch
+import re
+import emoji
+import unicodedata
 from tqdm import tqdm
 from transformers import BertTokenizer
 from transformers import BertForSequenceClassification
@@ -12,27 +15,24 @@ from sklearn.metrics import precision_score, recall_score, f1_score
 # Declaring device
 if torch.backends.mps.is_available():
     device = torch.device("mps")
-    print("###Using MPS on macOS now.###\n")
+    print("###Using MPS on macOS.###\n")
 elif torch.cuda.is_available():
     device = torch.device("cuda")
-    print("###Using CUDA now.###\n")
+    print("###Using CUDA.###\n")
 else:
     if not torch.backends.mps.is_built():
-        print("MPS not available because the current PyTorch install was not "
-              "built with MPS enabled.")
+        print("current PyTorch install was not built with MPS enabled.")
     else:
-        print("MPS not available because the current MacOS version is not 12.3+ "
-              "and/or you do not have an MPS-enabled device on this machine.")
+        print("current MacOS version is not 12.3+ and/or you do not have an MPS-enabled device on this machine.")
     device = torch.device("cpu")
-    print("###Using CPU now.###\n")
-print(torch.cuda.is_available())
+    print("###Using CPU.###\n")
 # Load dataset
 df_train = pd.read_csv("datasets/HatemojiBuild-train.csv")
 df_test = pd.read_csv("datasets/HatemojiBuild-test.csv")
 df_val = pd.read_csv("datasets/HatemojiBuild-validation.csv")
 print(df_train.head())
 
-# Preprocess text
+# Preprocess data
 train_texts, train_labels = df_train['text'], df_train['label_gold']
 val_texts, val_labels = df_val['text'], df_val['label_gold']
 test_texts, test_labels = df_test['text'], df_test['label_gold']
@@ -41,6 +41,17 @@ print("Train size:", len(train_texts))
 print("Val size:", len(val_texts))
 print("Test size:", len(test_texts))
 
+def preprocess_text(text):
+    text = unicodedata.normalize('NFKC', text)
+    text = emoji.demojize(text, delimiters=(" ", " "))
+    text = re.sub(r'[^a-zA-Z0-9\s]', '', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
+
+# Check usage
+check_text = "😂🖕 ＦＵＣＫ you"
+processed_text = preprocess_text(check_text)
+print(processed_text)
 # Tokenize data
 tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
 
