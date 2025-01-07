@@ -11,6 +11,7 @@ from transformers import AdamW
 from transformers import get_scheduler
 from torch.utils.data import DataLoader
 from sklearn.metrics import precision_score, recall_score, f1_score
+from sklearn.model_selection import train_test_split
 
 # Declaring device
 if torch.backends.mps.is_available():
@@ -39,10 +40,8 @@ df = pd.read_csv("datasets\labeled_data_added_emoji.csv")
 print("Original dataset shape:", df.shape)
 
 # Preprocess data
-
-train_texts, train_labels = df_train['text'], df_train['label']
-val_texts, val_labels = df_val['text'], df_val['label']
-test_texts, test_labels = df_test['text'], df_test['label']
+train_texts, test_texts, train_labels, test_labels = train_test_split(df['text'], df['label'], test_size=0.2, random_state=42)
+train_texts, val_texts, train_labels, val_labels = train_test_split(train_texts, train_labels, test_size=0.2, random_state=42)
 
 print("Train size:", len(train_texts))
 print("Val size:", len(val_texts))
@@ -100,7 +99,7 @@ val_dataset = EmojiDataset(val_encodings, val_labels)
 test_dataset = EmojiDataset(test_encodings, test_labels)
 
 # Model architecture
-model = BertForSequenceClassification.from_pretrained("nlptown/bert-base-multilingual-uncased-sentiment", num_labels=2)
+model = BertForSequenceClassification.from_pretrained("nlptown/bert-base-multilingual-uncased-sentiment", num_labels=3, ignore_mismatched_sizes=True)
 
 # Freeze all parameters
 for param in model.base_model.parameters():
@@ -223,12 +222,12 @@ print(f"F1-Score: {f1}")
 
 # Test the model
 print("Test results:")
-def sentiment_score(movie_review):
-    token = tokenizer.encode(movie_review, return_tensors = 'pt')
+def sentiment_score(text):
+    token = tokenizer.encode(text, return_tensors = 'pt')
     result = model(token)
     return int(torch.argmax(result.logits))+1
-df['label'] = df['text'].apply(lambda x: sentiment_movie_score(x[:512]))
+df['label'] = df['text'].apply(lambda x: sentiment_score(x[:512]))
 print(df)
 print(sentiment_score("I love you"))
 print(sentiment_score("😂🖕 you"))
-print(sentiment_score("They're all criminals to me 👩🏿👨🏿"))
+print(sentiment_score("Go back to your country 👩🏿👨🏿"))
