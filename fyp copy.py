@@ -9,7 +9,6 @@ import numpy as np
 from sklearn.metrics import classification_report
 from sklearn.metrics import accuracy_score
 
-
 # Declaring device
 if torch.backends.mps.is_available():
     device = torch.device("mps")
@@ -34,16 +33,16 @@ def preprocess_text(text):
 
 # Load dataset
 data = pd.read_csv("datasets\labeled_data_added_emoji.csv")
-print(data.head())
- 
+print("Original dataset shape:", data.shape)
 # Preprocess text
 data["text"] = data["text"].apply(preprocess_text)
+print("Preprocessed dataset shape:", data.shape)
+print("Preprocessed dataset label counts:", data["label"].value_counts())
 
 # Tokenize data
-tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+tokenizer = BertTokenizer.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment')
 encodings = tokenizer(list(data["text"]), truncation=True, padding=True, max_length=128)
 labels = torch.tensor(data["label"].values)
-
 # Create PyTorch Dataset
 class HateSpeechDataset(torch.utils.data.Dataset):
     def __init__(self, encodings, labels):
@@ -59,13 +58,17 @@ class HateSpeechDataset(torch.utils.data.Dataset):
         return item
 
 dataset = HateSpeechDataset(encodings, labels)
-
 # Split dataset
 train_size = int(0.8 * len(dataset))
-train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, len(dataset) - train_size])
+train_dataset, val_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, len(dataset) - train_size - 1000, 1000])
+print("Train size:", len(train_dataset))
+print("Val size:", len(val_dataset))
+print("Test size:", len(test_dataset))
+print("Train labels:", train_dataset.dataset.labels[train_dataset.indices].unique(return_counts=True))
 
 # Load BERT model
-model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=3)  # 3 labels: Hate, Offensive, Neutral
+model = BertForSequenceClassification.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment')
+# model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=3)  # 3 labels: Hate, Offensive, Neutral
 
 # Training arguments
 training_args = TrainingArguments(
@@ -92,8 +95,8 @@ trainer = Trainer(
     model=model,
     args=training_args,
     train_dataset=train_dataset,
-    eval_dataset=test_dataset,
-    processing_class=tokenizer,
+    eval_dataset=val_dataset,
+    tokenizer=tokenizer,
     compute_metrics=compute_metrics,
 )
 

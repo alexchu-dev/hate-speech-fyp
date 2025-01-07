@@ -84,7 +84,7 @@ test_dataset = EmojiDataset(test_encodings, test_labels)
 
 # Model architecture
 from transformers import BertForSequenceClassification
-model = BertForSequenceClassification.from_pretrained("bert-base-uncased", num_labels=2)
+model = BertForSequenceClassification.from_pretrained("nlptown/bert-base-multilingual-uncased-sentiment", num_labels=2)
 model.to(device)
 
 from transformers import AdamW

@@ -1,4 +1,4 @@
-entry_id,text,type,target,round.base,round.set,set,split,label_gold,matched_text,matched_id
+entry_id,text,type,target,round.base,round.set,set,split,label,matched_text,matched_id
 4,🐀 make me 🤢,none,['none'],5,5a,original,dev,0,👳🏽 make me 🤢,5
 9,all women are interested in is 💸💸💸 - correct,derogation,['wom'],5,5b,perturbation,dev,1,all women are interested in is 💸💸💸 - incorrect,8
 12,my 🔌hates black people,none,['none'],5,5a,original,dev,0,my 👀 hate black people,13

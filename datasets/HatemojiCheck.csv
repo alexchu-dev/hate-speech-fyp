@@ -1,4 +1,4 @@
-case_id,templ_id,test_group_id,text,target,functionality,set,label_gold,unrealistic_flags,included_in_test_suite
+case_id,templ_id,test_group_id,text,target,functionality,set,label,unrealistic_flags,included_in_test_suite
 0,1.0,1,I want to 🔪 all women,women,verb_swap,orig,1,0,1
 1,1.0,1,I want to 💣 all women,women,verb_swap,orig,1,0,1
 2,1.0,1,I want to 👊 all women,women,verb_swap,orig,1,0,1

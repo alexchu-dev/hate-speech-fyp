@@ -3,13 +3,16 @@ import pandas as pd
 import numpy as np
 from transformers import BertTokenizer, BertForSequenceClassification
 if __name__ == '__main__':
-    df = pd.read_csv('https://gist.githubusercontent.com/Mukilan-Krishnakumar/e998ecf27d11b84fe6225db11c239bc6/raw/74dbac2b992235e555df9a0a4e4d7271680e7e45/imdb_movie_reviews.csv')
-    df = df.drop('sentiment',axis=1)
+    df = pd.read_csv('datasets\labeled_data.csv')
+    df = df.drop('class',axis=1)
     tokenizer = BertTokenizer.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment')
     model = BertForSequenceClassification.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment')
-    def sentiment_movie_score(movie_review):
+    def sentiment_score(movie_review):
         token = tokenizer.encode(movie_review, return_tensors = 'pt')
         result = model(token)
         return int(torch.argmax(result.logits))+1
-    df['sentiment'] = df['text'].apply(lambda x: sentiment_movie_score(x[:512]))
+    df['class'] = df['tweet'].apply(lambda x: sentiment_score(x[:512]))
     print(df)
+    print(sentiment_score("I love you"))
+    print(sentiment_score("I fuck you"))
+    print(sentiment_score("facewithtearsofjoy middlefinger you"))

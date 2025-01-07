@@ -1,4 +1,4 @@
-entry_id,text,type,target,round.base,round.set,set,split,label_gold,matched_text,matched_id
+entry_id,text,type,target,round.base,round.set,set,split,label,matched_text,matched_id
 0,I would love to 🔪 some 👳🏾,threateninglanguage,"['asi.south', 'arab', 'mus']",5,5a,original,train,1,I would love to 👏🏽 some 👳🏾,1
 2,I would love to 🔪 some 👨🏿,threateninglanguage,['bla'],5,5a,original,train,1,I would love to 🔪some🦊,3
 3,I would love to 🔪some🦊,none,['none'],5,5b,perturbation,train,0,I would love to 🔪 some 👨🏿,2

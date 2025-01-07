@@ -1,4 +1,4 @@
-entry_id,text,type,target,round.base,round.set,set,split,label_gold,matched_text,matched_id
+entry_id,text,type,target,round.base,round.set,set,split,label,matched_text,matched_id
 1,I would love to 👏🏽 some 👳🏾,none,['none'],5,5b,perturbation,test,0,I would love to 🔪 some 👳🏾,0
 8,all women are interested in is 💸💸💸 - incorrect,none,['none'],5,5a,original,test,0,all women are interested in is 💸💸💸 - correct,9
 17,you cunts are 🅿️r🅾️ 👩‍❤️‍💋‍👩,derogation,['gaywom'],5,5b,perturbation,test,1,you cunts are 🚮,16

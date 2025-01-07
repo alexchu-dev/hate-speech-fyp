@@ -26,20 +26,13 @@ else:
         print("current MacOS version is not 12.3+ and/or you do not have an MPS-enabled device on this machine.")
     device = torch.device("cpu")
     print("###Using CPU.###\n")
-# Preprocess fn
-def preprocess_text(text):
-    text = unicodedata.normalize('NFKC', text)
-    text = emoji.demojize(text, delimiters=(" ", " "))
-    text = re.sub(r'[^a-zA-Z0-9\s]', '', text.replace('_', ' '))
-    text = re.sub(r'\s+', ' ', text).strip()
-    return text
-
 # Load dataset
-df = pd.read_csv("datasets\labeled_data_added_emoji.csv")
-print("Original dataset shape:", df.shape)
+df_train = pd.read_csv("datasets/HatemojiBuild-train.csv")
+df_test = pd.read_csv("datasets/HatemojiBuild-test.csv")
+df_val = pd.read_csv("datasets/HatemojiBuild-validation.csv")
+print(df_train.head())
 
 # Preprocess data
-
 train_texts, train_labels = df_train['text'], df_train['label']
 val_texts, val_labels = df_val['text'], df_val['label']
 test_texts, test_labels = df_test['text'], df_test['label']
@@ -48,7 +41,12 @@ print("Train size:", len(train_texts))
 print("Val size:", len(val_texts))
 print("Test size:", len(test_texts))
 
-
+def preprocess_text(text):
+    text = unicodedata.normalize('NFKC', text)
+    text = emoji.demojize(text, delimiters=(" ", " "))
+    text = re.sub(r'[^a-zA-Z0-9\s]', '', text.replace('_', ' '))
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
 
 # Tokenize data
 tokenizer = BertTokenizer.from_pretrained("nlptown/bert-base-multilingual-uncased-sentiment")
