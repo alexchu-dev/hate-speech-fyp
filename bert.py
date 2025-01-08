@@ -1,4 +1,5 @@
 import tensorflow as tf
+from tensorflow import keras
 import pandas as pd
 import numpy as np
 import re
@@ -9,7 +10,9 @@ from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 from transformers import BertTokenizer, TFBertForSequenceClassification
 import seaborn as sns
+# Check GPU availability
 print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
+print(tf.config.list_physical_devices('GPU'))
 
 # Set up logging
 logging.basicConfig(
@@ -50,38 +53,57 @@ class HateSpeechDetector:
         # Sample a few examples from each class
         print("\nSample hate speech:")
         for t, l in zip(texts, labels):
+            if l == 0:
+                print(f"- {t}")
+                break
+
+        # Sample a few examples from each class
+        print("\nSample offensive language:")
+        for t, l in zip(texts, labels):
             if l == 1:
                 print(f"- {t}")
                 break
                 
         print("\nSample non-hate speech:")
         for t, l in zip(texts, labels):
-            if l == 0:
+            if l == 2:
                 print(f"- {t}")
                 break
             
     def preprocess_text(self, text):
         """Preprocess text with emoji handling"""
         import emoji
-        
+        import unicodedata2
+
         if pd.isna(text):
             return ""
         
         # Lowercase
         text = text.lower()
-            
+
+        text = unicodedata2.normalize('NFKC', text)
+
         # Decode emojis to text description
-        text = emoji.demojize(text)
+        text = emoji.demojize(text, delimiters=(" ", " "))
 
         # Replace : and _
         text = text.replace(":", " ").replace("_", " ")
+
+        # Replace obfuscated characters
+        text = text.replace('0', 'o').replace('1', 'i').replace('3', 'e').replace('$', 's').replace('5', 's').replace('8', 'b').replace('9', 'g')
         
         # Handle common issues
         text = text.replace('\n', ' ')  # Replace newlines with space
-        text = re.sub(r'\s+', ' ', text)  # Remove extra whitespace
+        text = re.sub(r'\s+', ' ', text).strip()  # Remove extra whitespace
         text = text.strip()
-        
-        
+        # Remove username tags
+        text = re.sub(r'\b@\w+', '', text)
+        # Remove URLs
+        text = re.sub(r'http\S+', '', text)
+        # Remove hashtags
+        text = re.sub(r'#\w+', '', text)
+        # Remove username tags but keep certain obfuscations
+        text = re.sub(r'@\b(?!ss\b|\$\$\b)\w+', '', text)
         return text
 
     def prepare_data(self, df, text_column):
@@ -124,7 +146,7 @@ class HateSpeechDetector:
             {
                 'input_ids': encodings['input_ids'],
                 'attention_mask': encodings['attention_mask'],
-                'token_type_ids': encodings['token_type_ids']  # Added for BERT
+                'token_type_ids': encodings['token_type_ids']
             },
             labels
         ))
@@ -177,7 +199,7 @@ class HateSpeechDetector:
             )
             
             # Add class weights (higher weight for hate speech)
-            weights = tf.constant([1.0, 6.0, 3.0])
+            weights = tf.constant([6.0, 1.0, 3.0])
             sample_weights = tf.reduce_sum(y_true * weights, axis=1)
             
             # Apply weights
@@ -295,20 +317,27 @@ class HateSpeechDetector:
         # Make predictions
         predictions = []
         true_labels = []
-        
+        all_probs = []
+
         for batch in test_ds:
             logits = self.model(batch[0])[0]
+            probs = tf.nn.softmax(logits, axis=1).numpy()
             pred = tf.argmax(logits, axis=1).numpy()
+
             predictions.extend(pred)
             true_labels.extend(tf.argmax(batch[1], axis=1).numpy())
+            all_probs.extend(probs)
         
+        # Probabilities for ROC AUC, convert to numpy array
+        y_probs = np.array(all_probs) 
+
         # Calculate metrics
         metrics = {
             'accuracy': accuracy_score(true_labels, predictions),
-            'precision': precision_score(true_labels, predictions),
-            'recall': recall_score(true_labels, predictions),
-            'f1': f1_score(true_labels, predictions),
-            'roc_auc': roc_auc_score(true_labels, predictions)
+            'precision': precision_score(true_labels, predictions, average='weighted'),
+            'recall': recall_score(true_labels, predictions, average='macro'),
+            'f1': f1_score(true_labels, predictions, average='weighted'),
+            'roc_auc': roc_auc_score(true_labels, y_probs, multi_class='ovr')
         }
         
         # Print metrics
@@ -326,12 +355,24 @@ class HateSpeechDetector:
     
     def plot_confusion_matrix(self, cm):
         """Plot confusion matrix."""
+        if cm is None or not isinstance(cm, np.ndarray):
+            logging.error("Invalid confusion matrix passed to plot_confusion_matrix")
+            return
+        
+        print("Plotting confusion matrix...")
         plt.figure(figsize=(8, 6))
         sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
         plt.title('Confusion Matrix')
         plt.ylabel('True Label')
         plt.xlabel('Predicted Label')
-        plt.savefig(f'confusion_matrix_{datetime.now().strftime("%Y%m%d_%H%M%S")}.png')
+
+        filename = f'confusion_matrix_{datetime.now().strftime("%Y%m%d_%H%M%S")}.png'
+        logging.info(f"Saving confusion matrix to {filename}")
+        try:
+            plt.savefig(filename)
+            logging.info(f"Confusion matrix saved successfully: {filename}")
+        except Exception as e:
+            logging.error(f"Error saving confusion matrix: {e}")
         plt.close()
     
     def analyze_errors(self, texts, true_labels, predicted_labels):
@@ -372,11 +413,26 @@ class HateSpeechDetector:
             probabilities.extend(probs)
         
         return predictions, probabilities
+    
+    def save_model(self, path):
+        """Save the model to disk."""
+        self.model.save_pretrained(path)
+        self.tokenizer.save_pretrained(path)
+        logging.info(f"Model and tokenizer saved to {path}")
+
+    @classmethod    
+    def load_model(cls, path, max_length=128, batch_size=32):
+        """Load the model from the specified path."""
+        detector = cls(max_length=max_length, batch_size=batch_size)
+        detector.model = TFBertForSequenceClassification.from_pretrained(path)
+        detector.tokenizer = BertTokenizer.from_pretrained(path)
+        logging.info(f"Model and tokenizer loaded from {path}")
+        return detector
 
 # Usage example
 if __name__ == "__main__":
     # Load your data
-    df = pd.read_csv("datasets\labeled_data_added_emoji.csv")
+    df = pd.read_csv("datasets/labeled_data_added_emoji.csv")
     train_df, test_df = train_test_split(df, test_size=0.2, random_state=42)
     train_df, val_df = train_test_split(train_df, test_size=0.2, random_state=42)
 
@@ -389,8 +445,11 @@ if __name__ == "__main__":
         val_df=val_df,
         text_column='text',
         label_column='label',
-        epochs=20
+        epochs=50
     )
+
+    # Save model
+    detector.save_model("saved_model")
     
     # Evaluate model
     metrics = detector.evaluate(
@@ -398,3 +457,21 @@ if __name__ == "__main__":
         text_column='text',
         label_column='label'
     )
+
+    print("Evaluation Metrics:", metrics)
+
+    # Test the saved model
+    print("Testing the saved model...")
+
+    # Load test data
+    test_texts = pd.read_csv("datasets/test_data.csv")['text']
+    predictions, probabilities = detector.predict(test_texts)
+
+    # Load the saved model
+    detector = HateSpeechDetector.load_model("saved_model")
+
+    # Print predictions
+    for text, pred, prob in zip(test_texts, predictions, probabilities):
+        print(f"Text: {text}")
+        print(f"Predicted label: {pred}")
+        print(f"Probabilities: {prob}\n")
